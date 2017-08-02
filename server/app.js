@@ -24,6 +24,27 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// interceptor
+app.use((req, res, next) => {
+  if (req.cookies.userId) { // logged in 
+    next();
+  } else {
+    if (req.originalUrl == '/users/login' || 
+      req.originalUrl == '/users/logout' ||
+      // req.originalUrl.indexOf('/goods/list') > -1
+      req.path == "/goods/list"
+    ) {
+      next();
+    } else {
+      res.json({
+        status: '10001',
+        msg: '当前未登录',
+        result: ''
+      })
+    }
+  }
+});
+
 app.use('/', index);
 app.use('/users', users);
 app.use('/goods', goods);
