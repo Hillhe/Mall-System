@@ -478,6 +478,12 @@
 .icon-arrow-short {
   width: 11px;
   height: 11px;
+  transition: all .3s ease-out;
+}
+
+.sort-up {
+  transform: rotate(180deg);
+  transition: all .3s ease-out;
 }
 
 .page-title-accessory {

@@ -21,7 +21,7 @@ mongoose.connection.on('disconnected', ()=>{
 
 
 // pagination, sort, filter
-router.get('/', (req, res, next) => {
+router.get('/list', (req, res, next) => {
   const page = parseInt(req.param('page'));// get FE data
   const pageSize = parseInt(req.param('pageSize')); 
   const skip = (page - 1) * pageSize;
