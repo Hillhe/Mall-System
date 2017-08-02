@@ -79,127 +79,138 @@ router.get('/', (req, res, next) => {
   })
 });
 
-// add to cart
+
+// add to Cart
 router.post('/addCart', (req, res, next) => {
   const userId = '100000077'; // fake logged in
   const productId = req.body.productId; // post use req.body
 
-  // User.findOne({
-  //   userId: userId
-  // }, (err, userDoc) => {
-  //   if (err) {
-  //     res.json({
-  //       status: '1',
-  //       msg: err.message
-  //     });
-  //   } else {
-  //     if (userDoc) {
-  //       userDoc.cartList.forEach(item => {
-  //         if (item.productId == productId) { // in case duplicate item
-  //           console.log('duplicate')
-  //           item.productNum++;
-  //           userDoc.save((err2, doc2) => {
-  //             res.json({
-  //               status: '0',
-  //               msg: '',
-  //               result: 'suc'
-  //             })
-  //           });
-  //           return;
-  //         }
-  //       });
+// Promise version
+//   const promise = new Promise((resolve, reject) => {
+//     User.findOne({ userId }, (err, userDoc) => {
+//       if (err) {
+//         reject(err);
+//       } else {
+//         resolve(userDoc);
+//       }
+//     })
+//   });
+
+//   promise.then(userDoc => {
+//     let exists = false;
+
+//     userDoc.cartList.forEach(item => { // in case duplicate item
+//       if (item.productId == productId) {
+//         exists = true;
+//         item.productNum++;
+//       }
+//     });
+
+//     if (exists) {
+//       return Promise.resolve(userDoc);
+//     } else {
+//       return new Promise((resolve, reject) => {
+//         Goods.findOne({ productId }, (err, doc) => {
+//           if (err) {
+//             reject(err);
+//           } else {
+//             doc.productNum = 1; // goods model should contain these properties
+//             doc.checked = 1;
+//             userDoc.cartList.push(doc);
+//             resolve(userDoc);
+//           }
+//         });
+//       });
+//     }
+//   }, Promise.reject).then(userDoc => {
+
+//     return new Promise((resolve, reject) => {
+//       userDoc.save((err, newUserDoc) => {
+//         if (err) {
+//           reject(err);
+//         } else {
+//           res.json({
+//             status: '0',
+//             msg: '',
+//             result: 'suc'
+//           });
+
+//           resolve(newUserDoc);
+//         }
+//       });
+//     });
+//   }).catch(err => {
+//     res.json({
+//       status: '1',
+//       msg: err.message
+//     });
+//   });
 
 
 
-  //       Goods.findOne({productId}, (err1, doc1) => {
-  //         if (err1) {
-  //           res.json({
-  //             status: '1',
-  //             msg: err1.message
-  //           });
-  //         } else {
-  //           if (doc1) {
-  //             doc1.productNum = 1;
-  //             doc1.checked = 1;
-  //             console.log(doc1);
-  //             userDoc.cartList.push(doc1);
-  //             userDoc.save((err2, doc2) => {
-  //               res.json({
-  //                 status: '0',
-  //                 msg: '',
-  //                 result: 'suc'
-  //               })
-  //             })
-  //           }
-  //         }  
-  //       })
-  //     }
-  //   }
-  // });
-  const promise = new Promise((resolve, reject) => {
-    User.findOne({userId}, (err, userDoc) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(userDoc);
-      }
-    })
-  });
-
-  promise.then(userDoc => {
-
-    let single = true;
-
-    userDoc.cartList.forEach(item => { // in case duplicate item
-      if (item.productId == productId) {
-        single = false;
-        item.productNum++;
-        userDoc.save((err, doc) => {
-          res.json({
-            status: '0',
-            msg: '',
-            result: 'suc'
-          })
-        });
-      } 
-    })
-
-    if (single) {
-      Goods.findOne({productId}, (err, doc) => {
+// Async version
+  const getUserDoc = userId => 
+    new Promise ((resolve, reject) => {
+      User.findOne({ userId }, (err, userDoc) => {
         if (err) {
-          return err;
+          reject(err);
         } else {
-          return doc;
-
-          // doc.productNum = 1;
-          // doc.checked = 1;
-
-          // userDoc.cartList.push(doc);
-          // userDoc.save((err2, doc2) => {
-          //   res.json({
-          //     status: '0',
-          //     msg: '',
-          //     result: 'suc'
-          //   })
-          // })
+          resolve(userDoc);
         }
-      });
-    }
-   
-  }).then(doc => {
-    console.log('doc2' + doc);
-
-    doc.productNum = 1;
-    doc.checked = 1;
-
-    userDoc.cartList.push(doc);
-    userDoc.save((err2, doc2) => {
-      res.json({
-        status: '0',
-        msg: '',
-        result: 'suc'
       })
     })
+
+  const amendUserDoc = (userDoc, productId) => {
+    let exists = false;
+
+    userDoc.cartList.forEach(item => {
+      if (item.productId == productId) {
+        exists = true;
+        item.productNum++; 
+      }
+    });
+
+    if (exists) {
+      return Promise.resolve(userDoc);
+    } else {
+      return new Promise ((resolve, reject) => {
+        Goods.findOne({ productId }, (err, doc) => {
+          if (err) {
+            reject(err);
+          } else {
+            doc.productNum = 1; 
+            doc.checked = 1;
+            userDoc.cartList.push(doc);
+            resolve(userDoc);
+          }
+        });
+      })
+    }
+  }
+
+  const saveUserDoc = userDoc => 
+    new Promise((resolve, reject) => {
+      userDoc.save((err, doc) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(doc);
+        }
+      });
+    })
+
+  async function addCart(userId, productId) {
+    let userDoc = await getUserDoc(userId);
+    userDoc = await amendUserDoc(userDoc, productId);
+    await saveUserDoc(userDoc);
+  };
+
+  addCart(userId, productId).then(() => {
+    res.json({
+      status: '0',
+      msg: '',
+      result: 'suc'
+    });
   }).catch(err => {
     res.json({
       status: '1',
